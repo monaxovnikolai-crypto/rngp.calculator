@@ -2505,6 +2505,8 @@
         } catch(e) { console.warn(e); }
     }
     
+
+
     function renderSuggestions(sugs) {
         let c = document.getElementById('suggestContainer');
         if (!sugs.length) { c.style.display = 'none'; return; }
@@ -2512,7 +2514,7 @@
         sugs.forEach(s => {
             let div = document.createElement('div');
             div.className = 'suggest-item';
-            div.innerHTML = `<strong>${s.displayName.substring(0,60)}</strong><br><small>${s.text.substring(0,80)}</small>`;
+            div.innerHTML = `<strong>${s.displayName.substring(0,60)}</strong><br><small>${s.displayName.substring(0,80)}</small>`;  // ← исправлено: s.displayName
             div.onclick = () => {
                 currentCenterPoint = s.coords;
                 map.setView([s.coords.lat, s.coords.lng], 15);
@@ -2521,13 +2523,16 @@
                 else updateAccessibilityDistance(s.coords);
                 if (routingControl) { map.removeControl(routingControl); routingControl = null; }
                 selectedObjectId = null;
-                document.getElementById('searchInput').value = s.displayName;
+                document.getElementById('searchInput').value = s.displayName;  // ← исправлено: s.displayName
                 c.style.display = 'none';
             };
             c.appendChild(div);
         });
         c.style.display = 'block';
     }
+
+
+
     
     function captureDataToCalculator() {
         if (!currentDistrictMap) { alert("Сначала выберите городской округ на карте!"); return; }
