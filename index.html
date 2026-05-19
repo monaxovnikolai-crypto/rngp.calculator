@@ -2514,11 +2514,11 @@
             const loadPercent = parseFloat(obj.loadPercent);
             
             let loadColor = '#64748b', loadBgColor = '#e2e8f0';
-            if (loadPercent < 50) { loadColor = '#ef4444'; loadBgColor = '#fee2e2'; }
-            else if (loadPercent < 90) { loadColor = '#f97316'; loadBgColor = '#fff3e3'; }
-            else if (loadPercent < 100) { loadColor = '#eab308'; loadBgColor = '#fefce8'; }
-            else if (loadPercent <= 120) { loadColor = '#22c55e'; loadBgColor = '#e8f5e9'; }
-            else { loadColor = '#3b82f6'; loadBgColor = '#e0f2fe'; }
+	    if (loadPercent < 50) { loadColor = '#3b82f6'; loadBgColor = '#e0f2fe'; }      // недогружена → синий
+	    else if (loadPercent < 90) { loadColor = '#2563eb'; loadBgColor = '#dbeafe'; }  // недостаточно → синий светлый
+	    else if (loadPercent < 100) { loadColor = '#eab308'; loadBgColor = '#fefce8'; } // норма → жёлтый
+	    else if (loadPercent <= 120) { loadColor = '#f97316'; loadBgColor = '#fff3e3'; } // перегруз → оранжевый
+	    else { loadColor = '#ef4444'; loadBgColor = '#fee2e2'; }                         // сильная перегрузка → КРАСНЫЙ
             
             let extraStat = '';
             if (obj.type === 'school' && obj.secondShift && parseInt(obj.secondShift) > 0) {
