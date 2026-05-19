@@ -652,6 +652,8 @@
             outline: none;
         }
 
+
+
         .suggest-dropdown {
             position: absolute;
             top: 100%;
@@ -660,12 +662,14 @@
             background: white;
             border-radius: 16px;
             box-shadow: 0 8px 20px rgba(0,0,0,0.2);
-            z-index: 1000;
+            z-index: 999999;
             max-height: 260px;
             overflow-y: auto;
             margin-top: 6px;
             border: 1px solid #e2e8f0;
         }
+
+
 
         .suggest-item {
             padding: 12px 16px;
@@ -2503,19 +2507,16 @@ async function fetchSuggestions(q) {
             headers: { 'User-Agent': 'SchoolMapApp/1.0' } 
         });
         let data = await res.json();
-        
         if (!data || !data.length) {
             document.getElementById('suggestContainer').style.display = 'none';
             return;
         }
-
-        let suggs = data.map(item => ({
+        let suggs = data.map(item => ({ 
             displayName: item.display_name,
-            coords: { lat: parseFloat(item.lat), lng: parseFloat(item.lon) }
+            coords: { lat: parseFloat(item.lat), lng: parseFloat(item.lon) } 
         }));
-        
         renderSuggestions(suggs);
-    } catch(e) {
+    } catch(e) { 
         console.warn('Ошибка поиска:', e);
         document.getElementById('suggestContainer').style.display = 'none';
     }
