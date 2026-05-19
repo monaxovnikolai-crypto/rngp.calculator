@@ -2495,15 +2495,31 @@
         document.addEventListener('click', (e) => { if (!inp.contains(e.target) && !cont.contains(e.target)) cont.style.display = 'none'; });
     }
     
-    async function fetchSuggestions(q) {
-        try {
-            let res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q)}&limit=6&addressdetails=1&accept-language=ru&countrycodes=ru`, { headers: { 'User-Agent': 'SchoolMapApp/1.0' } });
-            let data = await res.json();
-            if (!data) return;
-            let suggs = data.map(item => ({ text: item.display_name, displayName: item.display_name.split(',')[0], coords: { lat: parseFloat(item.lat), lng: parseFloat(item.lon) } }));
-            renderSuggestions(suggs);
-        } catch(e) { console.warn(e); }
+
+
+async function fetchSuggestions(q) {
+    try {
+        let res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q)}&limit=6&addressdetails=1&accept-language=ru&countrycodes=ru`, { 
+            headers: { 'User-Agent': 'SchoolMapApp/1.0' } 
+        });
+        let data = await res.json();
+        
+        if (!data || !data.length) {
+            document.getElementById('suggestContainer').style.display = 'none';
+            return;
+        }
+
+        let suggs = data.map(item => ({
+            displayName: item.display_name,
+            coords: { lat: parseFloat(item.lat), lng: parseFloat(item.lon) }
+        }));
+        
+        renderSuggestions(suggs);
+    } catch(e) {
+        console.warn('Ошибка поиска:', e);
+        document.getElementById('suggestContainer').style.display = 'none';
     }
+}
     
 
 
