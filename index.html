@@ -682,6 +682,51 @@
             background: var(--mos-blue-light);
         }
 
+
+        /* === ЖЁСТКИЙ ФИКС ПОДСКАЗОК ПОВЕРХ КАРТЫ === */
+        .filter-group {
+            position: relative !important;
+            z-index: 999999 !important;
+        }
+        
+        .suggest-dropdown {
+            position: absolute !important;
+            top: 45px !important;
+            left: 0 !important;
+            right: auto !important;
+            min-width: 350px !important;
+            max-width: 450px !important;
+            background: white !important;
+            border-radius: 16px !important;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.4) !important;
+            z-index: 9999999 !important;
+            max-height: 300px !important;
+            overflow-y: auto !important;
+            border: 1px solid #ccc !important;
+        }
+        
+        .suggest-item {
+            padding: 12px 16px !important;
+            cursor: pointer !important;
+            border-bottom: 1px solid #e2e8f0 !important;
+            background: white !important;
+        }
+        
+        .suggest-item:hover {
+            background: #e6f0ff !important;
+        }
+        
+        #map {
+            z-index: 1 !important;
+        }
+        
+        .map-container {
+            z-index: 1 !important;
+        }
+
+
+
+
         .radius-control {
             display: flex;
             align-items: center;
