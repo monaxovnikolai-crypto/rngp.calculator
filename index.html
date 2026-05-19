@@ -2236,7 +2236,20 @@
                 body: JSON.stringify({ locations: [[centerCoords.lng, centerCoords.lat]], range: [minutes * 60], range_type: 'time', units: 'm' })
             });
             if (!response.ok) return;
+
+
+
+
             const data = await response.json();
+
+            // ===== НОВЫЙ КОД (ВСТАВЬ ЭТИ 5 СТРОЧЕК) =====
+            console.log('Изохрона получена:', data);
+            if (data.features && data.features.length) {
+                console.log('Координаты центра:', centerCoords);
+                console.log('Проверяемая точка объекта:', objectsInRadiusList[0]?.lat, objectsInRadiusList[0]?.lng);
+            }
+            // ===== КОНЕЦ НОВОГО КОДА =====
+
             if (data?.features?.length) {
                 if (isochroneLayer) map.removeLayer(isochroneLayer);
                 isochroneLayer = L.geoJSON(data, { style: { color: '#ff6b35', weight: 3, fillColor: '#ff6b35', fillOpacity: 0.1, dashArray: '5, 10' } }).addTo(map);
@@ -2254,6 +2267,8 @@
             }
         } catch(e) { console.error('ORS error:', e); }
     }
+
+
     
     function updateAccessibilityDistance(centerCoords) {
         const radiusKm = currentRadiusValue || 5;
@@ -2272,15 +2287,17 @@
     }
     
     function isPointInPolygon(point, polygon) {
-        const x = point[0], y = point[1];
-        let inside = false;
-        const coords = polygon.geometry.coordinates[0];
-        for (let i = 0, j = coords.length - 1; i < coords.length; j = i++) {
-            const xi = coords[i][0], yi = coords[i][1];
-            const xj = coords[j][0], yj = coords[j][1];
-            const intersect = ((yi > y) != (yj > y)) && (x < (xj - xi) * (y - yi) / (yj - yi) + xi);
-            if (intersect) inside = !inside;
-        }
+        var x = point[0], y = point[1];
+        var inside = false;
+        try {
+            var coords = polygon.geometry.coordinates[0];
+            for (var i = 0, j = coords.length - 1; i < coords.length; j = i++) {
+                var xi = coords[i][0], yi = coords[i][1];
+                var xj = coords[j][0], yj = coords[j][1];
+                var intersect = ((yi > y) != (yj > y)) && (x < (xj - xi) * (y - yi) / (yj - yi) + xi);
+                if (intersect) inside = !inside;
+            }
+        } catch(e) { console.warn('Ошибка isPointInPolygon:', e); }
         return inside;
     }
     
