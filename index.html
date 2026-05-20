@@ -1825,92 +1825,101 @@
     }
 
     // ==================== ГЕНЕРАЦИЯ РЕШЕНИЙ ====================
-    function generateSolutions() {
-        const population = getPopulation();
-        let schoolNeedRaw = Math.round(population * SCHOOL_RATE);
-        let kinderNeedRaw = Math.round(population * KINDER_RATE);
-        
-        const schoolPlanVal = parseFloat(schoolPlan.value) || 0;
-        const schoolActualVal = parseFloat(schoolActual.value) || 0;
-        const kinderPlanVal = parseFloat(kindergartenPlan.value) || 0;
-        const kinderActualVal = parseFloat(kindergartenActual.value) || 0;
-        
-        let schoolSurplus = Math.max(0, schoolPlanVal - schoolActualVal);
-        let kinderSurplus = Math.max(0, kinderPlanVal - kinderActualVal);
-        
-        const schoolNeedWithDem = Math.round(schoolNeedRaw * DEM_FACTOR);
-        const kinderNeedWithDem = Math.round(kinderNeedRaw * DEM_FACTOR);
-
-        let kLoadSchool = (schoolNeedWithDem - schoolSurplus) / schoolNeedWithDem;
-        if (kLoadSchool < 0) kLoadSchool = 0;
-        let kLoadKindergarten = (kinderNeedWithDem - kinderSurplus) / kinderNeedWithDem;
-        if (kLoadKindergarten < 0) kLoadKindergarten = 0;
-
-        let schoolRemain = Math.round(schoolNeedWithDem * kLoadSchool);
-        let kinderRemain = Math.round(kinderNeedWithDem * kLoadKindergarten);
-        
-        let schoolReserveArea = Math.max(0, getSchoolZUArea(schoolNeedRaw) - getSchoolZUArea(schoolRemain));
-        let kinderReserveArea = Math.max(0, getKindergartenZUArea(kinderNeedRaw) - getKindergartenZUArea(kinderRemain));
-        
-        let schoolNeedAdjusted = Math.round(schoolNeedRaw * DEM_FACTOR);
-        let kinderNeedAdjusted = Math.round(kinderNeedRaw * DEM_FACTOR);
-        
-        let schoolHtml = `<strong>📊 Исходная потребность по РНГП: ${schoolNeedRaw} мест</strong><br>`;
-        schoolHtml += `<strong>📉 Потребность с учётом дем-фактора (0,85): ${schoolNeedAdjusted} мест</strong><br>`;
-        schoolHtml += `<strong>📊 Коэффициент загрузки К_загрузки: ${kLoadSchool.toFixed(3)}</strong><br>`;
-        schoolHtml += `<strong>✅ Скорректированная потребность (после К_загрузки): ${schoolRemain} мест</strong><br>`;
-        schoolHtml += `<hr style="margin: 8px 0;">`;
-        
-        if (schoolRemain > 0) {
-            schoolHtml += `<br><div class="solution-detail"><strong>🏗️ Строительство школы застройщиком на ${schoolRemain} мест</strong><br>`;
-            schoolHtml += `📊 Финансирование разницы по РНГП: ${schoolSurplus} мест (размещение в существующих объектах)</div>`;
-        } else {
-            schoolHtml += `<br><div class="solution-detail">✅ Вся потребность покрывается существующими объектами (финансирование ${schoolSurplus} мест), строительство не требуется</div>`;
-        }
-        
-        if (schoolReserveArea > 0) {
-            schoolHtml += `<br><div class="solution-detail" style="background: #fef3c7;">`;
-            schoolHtml += `<strong>🏞️ Резерв ЗУ и расселение ветхового жилья:</strong><br>`;
-            schoolHtml += `📐 Резерв формируется как разница: ЗУ(исходная потребность) - ЗУ(скорректированная потребность)<br>`;
-            schoolHtml += `📏 Требуемая площадь резерва: ${schoolReserveArea.toFixed(4)} га (${(schoolReserveArea * 10000).toFixed(0)} м²)<br>`;
-            if (schoolReserveArea < 0.5) {
-                schoolHtml += `⚠️ Менее 0.5 га — требуется учесть землю в строительстве объекта / расселение`;
-            }
-            schoolHtml += `</div>`;
-        } else {
-            schoolHtml += `<br><div class="solution-detail" style="background: #e0f2fe;">✅ Резерв ЗУ и расселение не требуются</div>`;
-        }
-        schoolSolutionText.innerHTML = schoolHtml;
-        
-        let kinderHtml = `<strong>📊 Исходная потребность по РНГП: ${kinderNeedRaw} мест</strong><br>`;
-        kinderHtml += `<strong>📉 Потребность с учётом дем-фактора (0,85): ${kinderNeedAdjusted} мест</strong><br>`;
-        kinderHtml += `<strong>📊 Коэффициент загрузки К_загрузки: ${kLoadKindergarten.toFixed(3)}</strong><br>`;
-        kinderHtml += `<strong>✅ Скорректированная потребность (после К_загрузки): ${kinderRemain} мест</strong><br>`;
-        kinderHtml += `<hr style="margin: 8px 0;">`;
-        
-        if (kinderRemain > 0) {
-            kinderHtml += `<br><div class="solution-detail"><strong>🏗️ Строительство сада застройщиком на ${kinderRemain} мест</strong><br>`;
-            kinderHtml += `📊 Финансирование разницы по РНГП: ${kinderSurplus} мест (размещение в существующих объектах)</div>`;
-        } else {
-            kinderHtml += `<br><div class="solution-detail">✅ Вся потребность покрывается существующими объектами (финансирование ${kinderSurplus} мест), строительство не требуется</div>`;
-        }
-        
-        if (kinderReserveArea > 0) {
-            kinderHtml += `<br><div class="solution-detail" style="background: #fef3c7;">`;
-            kinderHtml += `<strong>🏞️ Резерв ЗУ и расселение ветхового жилья:</strong><br>`;
-            kinderHtml += `📐 Резерв формируется как разница: ЗУ(исходная потребность) - ЗУ(скорректированная потребность)<br>`;
-            kinderHtml += `📏 Требуемая площадь резерва: ${kinderReserveArea.toFixed(4)} га (${(kinderReserveArea * 10000).toFixed(0)} м²)<br>`;
-            if (kinderReserveArea < 0.5) {
-                kinderHtml += `⚠️ Менее 0.5 га — требуется учесть землю в строительстве объекта / расселение`;
-            }
-            kinderHtml += `</div>`;
-        } else {
-            kinderHtml += `<br><div class="solution-detail" style="background: #e0f2fe;">✅ Резерв ЗУ и расселение не требуются</div>`;
-        }
-        kindergartenSolutionText.innerHTML = kinderHtml;
-        solutionsContainer.style.display = 'flex';
-        updateProposalTable();
+function generateSolutions() {
+    const population = getPopulation();
+    let schoolNeedRaw = Math.round(population * SCHOOL_RATE);
+    let kinderNeedRaw = Math.round(population * KINDER_RATE);
+    
+    const schoolPlanVal = parseFloat(schoolPlan.value) || 0;
+    const schoolActualVal = parseFloat(schoolActual.value) || 0;
+    const kinderPlanVal = parseFloat(kindergartenPlan.value) || 0;
+    const kinderActualVal = parseFloat(kindergartenActual.value) || 0;
+    
+    // Свободные места в существующих объектах (сколько могут принять)
+    let schoolFreePlaces = Math.max(0, schoolPlanVal - schoolActualVal);
+    let kinderFreePlaces = Math.max(0, kinderPlanVal - kinderActualVal);
+    
+    // Финансирование = сколько из ПОТРЕБНОСТИ покрываем за счёт свободных мест
+    let schoolFinancing = Math.min(schoolFreePlaces, schoolNeedRaw);
+    let kinderFinancing = Math.min(kinderFreePlaces, kinderNeedRaw);
+    
+    // Строительство = остаток после финансирования
+    let schoolToBuild = Math.max(0, schoolNeedRaw - schoolFinancing);
+    let kinderToBuild = Math.max(0, kinderNeedRaw - kinderFinancing);
+    
+    // Дем-фактор применяем к строительству (если нужно)
+    const schoolToBuildWithDem = Math.round(schoolToBuild * DEM_FACTOR);
+    const kinderToBuildWithDem = Math.round(kinderToBuild * DEM_FACTOR);
+    
+    // Резерв ЗУ — под детей, которых финансируем (размещаем в существующих объектах)
+    let schoolReserveArea = getSchoolZUArea(schoolFinancing);
+    let kinderReserveArea = getKindergartenZUArea(kinderFinancing);
+    
+    let schoolNeedAdjusted = Math.round(schoolNeedRaw * DEM_FACTOR);
+    let kinderNeedAdjusted = Math.round(kinderNeedRaw * DEM_FACTOR);
+    
+    // Решение по школам
+    let schoolHtml = `<strong>📊 Исходная потребность по РНГП: ${schoolNeedRaw} мест</strong><br>`;
+    schoolHtml += `<strong>🏢 Свободные места в существующих школах: ${schoolFreePlaces} мест</strong><br>`;
+    schoolHtml += `<strong>💰 Финансирование (размещение в существующих): ${schoolFinancing} мест</strong><br>`;
+    schoolHtml += `<strong>🏗️ Строительство (остаток): ${schoolToBuild} мест</strong><br>`;
+    schoolHtml += `<strong>📉 С учётом дем-фактора (0,85): ${schoolToBuildWithDem} мест</strong><br>`;
+    schoolHtml += `<hr style="margin: 8px 0;">`;
+    
+    if (schoolToBuildWithDem > 0) {
+        schoolHtml += `<br><div class="solution-detail"><strong>🏗️ Строительство школы застройщиком на ${schoolToBuildWithDem} мест</strong><br>`;
+        schoolHtml += `📊 Финансирование: ${schoolFinancing} мест (размещение в существующих объектах)</div>`;
+    } else {
+        schoolHtml += `<br><div class="solution-detail">✅ Вся потребность покрывается существующими объектами (финансирование ${schoolFinancing} мест), строительство не требуется</div>`;
     }
+    
+    // Резерв ЗУ
+    if (schoolFinancing > 0) {
+        schoolHtml += `<br><div class="solution-detail" style="background: #fef3c7;">`;
+        schoolHtml += `<strong>🏞️ Резерв ЗУ и расселение ветхового жилья:</strong><br>`;
+        schoolHtml += `📐 Резерв требуется под ${schoolFinancing} детей, размещаемых в существующих школах (финансирование)<br>`;
+        schoolHtml += `📏 Требуемая площадь резерва: ${schoolReserveArea.toFixed(4)} га (${(schoolReserveArea * 10000).toFixed(0)} м²)<br>`;
+        if (schoolReserveArea < 0.5) {
+            schoolHtml += `⚠️ Менее 0.5 га — требуется учесть землю в строительстве объекта / расселение`;
+        }
+        schoolHtml += `</div>`;
+    } else {
+        schoolHtml += `<br><div class="solution-detail" style="background: #e0f2fe;">✅ Резерв ЗУ и расселение не требуются (все дети строятся застройщиком)</div>`;
+    }
+    schoolSolutionText.innerHTML = schoolHtml;
+    
+    // Решение по детским садам (аналогично)
+    let kinderHtml = `<strong>📊 Исходная потребность по РНГП: ${kinderNeedRaw} мест</strong><br>`;
+    kinderHtml += `<strong>🏢 Свободные места в существующих садах: ${kinderFreePlaces} мест</strong><br>`;
+    kinderHtml += `<strong>💰 Финансирование (размещение в существующих): ${kinderFinancing} мест</strong><br>`;
+    kinderHtml += `<strong>🏗️ Строительство (остаток): ${kinderToBuild} мест</strong><br>`;
+    kinderHtml += `<strong>📉 С учётом дем-фактора (0,85): ${kinderToBuildWithDem} мест</strong><br>`;
+    kinderHtml += `<hr style="margin: 8px 0;">`;
+    
+    if (kinderToBuildWithDem > 0) {
+        kinderHtml += `<br><div class="solution-detail"><strong>🏗️ Строительство сада застройщиком на ${kinderToBuildWithDem} мест</strong><br>`;
+        kinderHtml += `📊 Финансирование: ${kinderFinancing} мест (размещение в существующих объектах)</div>`;
+    } else {
+        kinderHtml += `<br><div class="solution-detail">✅ Вся потребность покрывается существующими объектами (финансирование ${kinderFinancing} мест), строительство не требуется</div>`;
+    }
+    
+    // Резерв ЗУ для садов
+    if (kinderFinancing > 0) {
+        kinderHtml += `<br><div class="solution-detail" style="background: #fef3c7;">`;
+        kinderHtml += `<strong>🏞️ Резерв ЗУ и расселение ветхового жилья:</strong><br>`;
+        kinderHtml += `📐 Резерв требуется под ${kinderFinancing} детей, размещаемых в существующих садах (финансирование)<br>`;
+        kinderHtml += `📏 Требуемая площадь резерва: ${kinderReserveArea.toFixed(4)} га (${(kinderReserveArea * 10000).toFixed(0)} м²)<br>`;
+        if (kinderReserveArea < 0.5) {
+            kinderHtml += `⚠️ Менее 0.5 га — требуется учесть землю в строительстве объекта / расселение`;
+        }
+        kinderHtml += `</div>`;
+    } else {
+        kinderHtml += `<br><div class="solution-detail" style="background: #e0f2fe;">✅ Резерв ЗУ и расселение не требуются (все дети строятся застройщиком)</div>`;
+    }
+    kindergartenSolutionText.innerHTML = kinderHtml;
+    solutionsContainer.style.display = 'flex';
+    updateProposalTable();
+}
     
     generateSolutionsBtn.addEventListener('click', generateSolutions);
     
