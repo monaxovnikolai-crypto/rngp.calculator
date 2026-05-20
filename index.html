@@ -1155,7 +1155,7 @@
             <button id="aiOpinionBtn" class="ai-button">🧠 Мнение ИИ (аналитика)</button>
             <div id="aiResponse" class="ai-response">
                 <div id="aiText"></div>
-                <div class="vpn-note">⚠️ Мнение ИИ доступно только при включенном VPN</div>
+                <div class="vpn-note">⚠️ Мнение ИИ носит рекомендательный характер</div>
             </div>
         </div>
 
@@ -1915,83 +1915,122 @@
     generateSolutionsBtn.addEventListener('click', generateSolutions);
     
     // ==================== ИИ МНЕНИЕ ====================
-    async function getAIOpinion() {
-        const population = getPopulation();
-        const schoolNeed = Math.round(population * SCHOOL_RATE);
-        const kinderNeed = Math.round(population * KINDER_RATE);
-        const schoolPlanVal = parseFloat(schoolPlan.value) || 0;
-        const schoolActualVal = parseFloat(schoolActual.value) || 0;
-        const kinderPlanVal = parseFloat(kindergartenPlan.value) || 0;
-        const kinderActualVal = parseFloat(kindergartenActual.value) || 0;
-        const hasSecond = secondShiftToggle.checked;
-        const hasQueue = queueToggle.checked;
-        const queueCount = parseFloat(queueNumber.value) || 0;
-        const schoolLoad = schoolPlanVal > 0 ? (schoolActualVal / schoolPlanVal) * 100 : 0;
-        const kinderLoad = kinderPlanVal > 0 ? (kinderActualVal / kinderPlanVal) * 100 : 0;
-        
-        let schoolCanTake = 0;
-        if (schoolPlanVal > 0 && !hasSecond) {
-            let maxGoodLoad = 120;
-            let currentLoadPercent = (schoolActualVal / schoolPlanVal) * 100;
-            if (currentLoadPercent < maxGoodLoad) {
-                schoolCanTake = Math.floor(schoolPlanVal * (maxGoodLoad / 100) - schoolActualVal);
-                if (schoolCanTake < 0) schoolCanTake = 0;
-            }
-        }
-        
-        let kinderCanTake = 0;
-        if (kinderPlanVal > 0 && !hasQueue) {
-            let maxGoodLoad = 140;
-            let currentLoadPercent = (kinderActualVal / kinderPlanVal) * 100;
-            if (currentLoadPercent < maxGoodLoad) {
-                kinderCanTake = Math.floor(kinderPlanVal * (maxGoodLoad / 100) - kinderActualVal);
-                if (kinderCanTake < 0) kinderCanTake = 0;
-            }
-        }
-        
-        const schoolCovered = Math.min(schoolCanTake, schoolNeed);
-        const kinderCovered = Math.min(kinderCanTake, kinderNeed);
-        const schoolRemain = Math.max(0, schoolNeed - schoolCovered);
-        const kinderRemain = Math.max(0, kinderNeed - kinderCovered);
-        
-        const prompt = `Ты эксперт по градостроительству. Отвечай ТОЛЬКО по-русски. 4-5 предложений.
-        
-Правила:
-- Если застройщик строит объект полностью на требуемую мощность — земля НЕ резервируется.
-- Если застройщик часть детей размещает в существующих объектах (финансирование) — тогда нужен резерв земли под этих детей.
-- Сады: если нет возможности разместить детей в существующих садах, строим ПО ПРОЕКТНОЙ МОЩНОСТИ.
-- Школы: вторая смена — плохо, загрузка до 120% — норма.
-- Сады: загрузка до 140% — норма, очередь более 50 детей — плохо.
-
-Данные для нового ЖК:
-- Нужно построить: школа ${schoolNeed} мест, сад ${kinderNeed} мест.
-- Существующая школа: мощность ${schoolPlanVal}, факт ${schoolActualVal} (загрузка ${schoolLoad.toFixed(0)}%), вторая смена ${hasSecond ? "есть" : "нет"}. Можно принять дополнительно ${Math.max(0, schoolCanTake)} детей.
-- Существующий сад: мощность ${kinderPlanVal}, факт ${kinderActualVal} (загрузка ${kinderLoad.toFixed(0)}%), очередь ${hasQueue ? queueCount : 0} детей. Можно принять дополнительно ${Math.max(0, kinderCanTake)} детей.
-- Остаток после существующих: школа ${schoolRemain} мест, сад ${kinderRemain} мест.
-- Резерв земли нужен: школа ${schoolCovered > 0 ? "ДА" : "НЕТ"}, сад ${kinderCovered > 0 ? "ДА" : "НЕТ"}.
-
-Оцени ситуацию и дай чёткую рекомендацию: что строить, что финансировать, нужен ли резерв земли.`;
-        
-        aiText.innerHTML = "⏳ Анализирую данные...";
+async function getAIOpinion() {
+    // Проверка: есть ли вообще введенные данные
+    const hasAnyData = (mainValue.value && parseFloat(mainValue.value) > 0) || 
+                       (schoolPlan.value && parseFloat(schoolPlan.value) > 0) || 
+                       (kindergartenPlan.value && parseFloat(kindergartenPlan.value) > 0);
+    
+    if (!hasAnyData) {
+        aiText.innerHTML = "⚠️ Введите данные для расчёта (население/площадь или объекты).";
         aiResponse.style.display = "block";
-        try {
-            const response = await fetch(PROXY_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ message: prompt }) });
-            const data = await response.json();
-            aiText.innerHTML = data.reply || data.error || `❌ Не удалось получить ответ от ИИ.`;
-        } catch (err) {
-            aiText.innerHTML = `❌ Ошибка соединения: ${err.message}. Проверьте VPN.`;
-        }
+        return;
     }
     
-    aiOpinionBtn.addEventListener('click', () => {
-        const hasAnyData = (mainValue.value && parseFloat(mainValue.value) > 0) || (schoolPlan.value && parseFloat(schoolPlan.value) > 0) || (kindergartenPlan.value && parseFloat(kindergartenPlan.value) > 0);
-        if (!hasAnyData) {
-            alert("Пожалуйста, введите данные перед запросом.");
-            return;
-        }
-        getAIOpinion();
-    });
+    // Берём данные из таблицы "Скорректированная потребность"
+    const schoolRemain = parseInt(schoolFinalSpan.innerText.replace(/\D/g, '')) || 0;
+    const kindergartenRemain = parseInt(kindergartenFinalSpan.innerText.replace(/\D/g, '')) || 0;
     
+    // Если строить нечего
+    if (schoolRemain === 0 && kindergartenRemain === 0) {
+        aiText.innerHTML = "📊 Скорректированная потребность = 0. Строительство не требуется. Ситуация благоприятная.";
+        aiResponse.style.display = "block";
+        return;
+    }
+    
+    // Собираем данные для ИИ
+    const population = getPopulation();
+    const schoolNeedRaw = Math.round(population * SCHOOL_RATE);
+    const kinderNeedRaw = Math.round(population * KINDER_RATE);
+    
+    const schoolPlanVal = parseFloat(schoolPlan.value) || 0;
+    const schoolActualVal = parseFloat(schoolActual.value) || 0;
+    const kinderPlanVal = parseFloat(kindergartenPlan.value) || 0;
+    const kinderActualVal = parseFloat(kindergartenActual.value) || 0;
+    const hasSecond = secondShiftToggle.checked;
+    const hasQueue = queueToggle.checked;
+    const queueCount = parseFloat(queueNumber.value) || 0;
+    
+    const schoolLoad = schoolPlanVal > 0 ? Math.round((schoolActualVal / schoolPlanVal) * 100) : 0;
+    const kinderLoad = kinderPlanVal > 0 ? Math.round((kinderActualVal / kinderPlanVal) * 100) : 0;
+    
+    const schoolSurplus = Math.max(0, schoolPlanVal - schoolActualVal);
+    const kinderSurplus = Math.max(0, kinderPlanVal - kinderActualVal);
+    
+    const demSchool = Math.round(schoolNeedRaw * DEM_FACTOR);
+    const demKinder = Math.round(kinderNeedRaw * DEM_FACTOR);
+    
+    // Формируем запрос к ИИ
+    const prompt = `Ты независимый эксперт по градостроительству. Дай свою ОЦЕНКУ ситуации, НЕ ОГЛЯДЫВАЯСЬ на предложенные выше решения. Твоё мнение может совпадать или отличаться — это нормально.
+
+ОТВЕЧАЙ ТОЛЬКО ПО-РУССКИ. 4-5 предложений. Без маркдауна, без звёздочек, просто текст.
+
+ДАННЫЕ ДЛЯ ОЦЕНКИ:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ИСХОДНАЯ ПОТРЕБНОСТЬ (РНГП):
+- Школы: ${schoolNeedRaw} мест
+- Детские сады: ${kinderNeedRaw} мест
+
+ПОТРЕБНОСТЬ С ДЕМ-ФАКТОРОМ (0,85):
+- Школы: ${demSchool} мест
+- Детские сады: ${demKinder} мест
+
+СУЩЕСТВУЮЩИЕ ОБЪЕКТЫ:
+- Школа: мощность ${schoolPlanVal} мест, факт ${schoolActualVal} чел, загрузка ${schoolLoad}%, вторая смена: ${hasSecond ? "есть" : "нет"}
+- Сад: мощность ${kinderPlanVal} мест, факт ${kinderActualVal} чел, загрузка ${kinderLoad}%, очередь 3-7 лет: ${hasQueue ? queueCount : 0} детей
+
+РАСПРЕДЕЛЕНИЕ ДЕТЕЙ НОВОГО ЖК:
+- В существующие школы (финансирование): ${Math.min(schoolSurplus, schoolNeedRaw)} мест
+- В существующие сады (финансирование): ${Math.min(kinderSurplus, kinderNeedRaw)} мест
+
+СКОРРЕКТИРОВАННАЯ ПОТРЕБНОСТЬ (то, что нужно строить):
+- Школы: ${schoolRemain} мест
+- Детские сады: ${kindergartenRemain} мест
+
+ЗАДАНИЕ:
+Дай независимую оценку ситуации. Обрати внимание на:
+1. Достаточно ли существующих объектов для размещения детей нового ЖК?
+2. Реалистично ли финансировать размещение детей в существующих объектах?
+3. Нужно ли строить новые объекты?
+4. Есть ли риски (перегрузка школ, большая очередь в сады)?
+
+ТВОЯ ОЦЕНКА:`;
+
+    aiText.innerHTML = "⏳ Анализирую данные (независимая оценка)...";
+    aiResponse.style.display = "block";
+    
+    try {
+        const response = await fetch(PROXY_URL, { 
+            method: 'POST', 
+            headers: { 'Content-Type': 'application/json' }, 
+            body: JSON.stringify({ message: prompt }) 
+        });
+        
+        const data = await response.json();
+        
+        if (data.reply) {
+            aiText.innerHTML = data.reply;
+        } else if (data.error) {
+            aiText.innerHTML = `❌ Ошибка API: ${data.error}`;
+        } else {
+            aiText.innerHTML = `❌ Не удалось получить ответ от ИИ.`;
+        }
+    } catch (err) {
+        aiText.innerHTML = `❌ Ошибка соединения: ${err.message}. Проверьте прокси-сервер.`;
+    }
+}
+
+aiOpinionBtn.addEventListener('click', () => {
+    const hasAnyData = (mainValue.value && parseFloat(mainValue.value) > 0) || 
+                       (schoolPlan.value && parseFloat(schoolPlan.value) > 0) || 
+                       (kindergartenPlan.value && parseFloat(kindergartenPlan.value) > 0);
+    if (!hasAnyData) {
+        alert("Пожалуйста, введите данные перед запросом.");
+        return;
+    }
+    getAIOpinion();
+});
+
     // ==================== ОБРАБОТЧИКИ СОБЫТИЙ ====================
     calcType.addEventListener('change', () => { updateHint(); recalc(); });
     mainValue.addEventListener('input', () => { updateHint(); recalc(); });
